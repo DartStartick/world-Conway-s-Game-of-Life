@@ -1,106 +1,74 @@
-#include <curses.h>
+#include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdio.h>
+#include <curses.h>
 #include "world.h"
-#include "game.h"
+#include <time.h>
+#include <unistd.h>
 
-// Start is called one in the beginning
-void* init_game(){
-    // Allocate memory for the state
-    struct game* st = calloc(1,(sizeof(struct game)));
-    // Initialize state
-    st->mousex = 5;
-    st->mousey = 5;
-    st->catx = 0;
-    st->caty = 0;
-    st->catx_position = 15;
-    st->caty_position = 15;
-    // Store pointer to the state to the world variable
-    return st;
+// Размеры игрового поля (Rozmery hracej plochy)
+#define GAME_WIDTH 230
+#define GAME_HEIGHT 50
+
+bool paused = false; // Флаг паузы (Vlajka pauzy)
+int iteration = 0; // Счетчик итераций (Počítadlo iterácií)
+double random_count = 0.12; // Счетчик псевдослучайных клеток (Pseudonáhodné počítadlo buniek)
+
+// Функция обработки пользовательского ввода (Funkcia spracovania používateľských vstupov)
+void setCell(World* world, size_t x, size_t y, bool value);
+bool getCell(const World* world, size_t x, size_t y);
+
+// Функция обработки событий (Funkcia spracovania udalostí)
+void handleInput(World* world) {
+    int ch = getch();
+    if (ch == '\n') {
+        iteration = 0;
+        randomizeCells(world, random_count);
+        clear();
+        refresh();
+    } else if (ch == ' ') {
+        paused = !paused; // Инвертируем флаг паузы (Invertovanie príznaku pauzy)
+    } else if (ch == '=' && random_count < 0.35) {
+        random_count += 0.01; // Увеличиваем счетчик псевдослучайных клеток (Zvýšenie počítadla pseudonáhodných buniek)
+    } else if (ch == '-' && random_count > 0.05) {
+        random_count -= 0.01; // Уменьшаем счетчик псевдослучайных клеток (Zníženie počítadla pseudonáhodných buniek)
+    }
 }
 
-// Step is called in a loop once in interval.
-// It should modify the state and draw it.
-int game_event(struct event* event,void* game){
-    // Get state pointer
-    struct game* state = game;
-    char msg[200];
-    sprintf(msg,"%d",event->type);
-    set_message(msg,10,0);
-    if ( event->type == EVENT_ESC){
-        // Non zero means finish the loop and stop the game.
-        return 1;
-    }
-    // Read game variable and update the  eventstate
+// Основная игровая функция (Hlavná funkcia hry)
+void playGame() {
+    srand(time(NULL));
 
-    // Is mouse caught ?
-    if ((state->caty_position == state->mousey) && (state->catx_position == state->mousex)){
-        clear_screen();
-        set_message("HAM",12,13);
-        return 0;
-    }
-    else if(event->type == EVENT_TIMEOUT) {
-        // Move cat
-        //state->catx_position += state->catx;
-        //state->caty_position += state->caty;
-        int cx = state->catx_position + state->catx;
-        int cy = state->caty_position + state->caty;
-        if (cx < 0 || cy < 0 || cx > event->width || cy > event->height){
+    World* world = newWorld(WORLD_WIDTH, WORLD_HEIGHT);
+    randomizeCells(world, random_count);
 
-        }
-        else {
-            state->catx_position = cx;
-            state->caty_position = cy;
-        }
+    initscr(); // Инициализация curses (Inicializácia kliatby)
+    noecho();  // Отключение эхо ввода (Deaktivácia vstupu echo)
+    cbreak();  // Чтение символов без буферизации (Čítanie znakov bez vyrovnávacej pamäte)
+    nodelay(stdscr, TRUE); // Неблокирующее чтение ввода (Neblokované čítanie vstupov)
+    curs_set(0); // Скрыть курсор (Skryť kurzor)
 
-        //state->catx_position += state->catx;
-        //state->caty_position += state->caty;
-        //state->caty_position += state->caty;
-        // random mouse movement
-        int m = rand() % 6;
-        if (m == 0){
-            state->mousey -= 1;
+    while (true) {
+        printWorld(world, stdscr);
+
+        // Весь присутствующий текст (Všetok prítomný text)
+        mvprintw(GAME_HEIGHT + 1, 0, "Iterations: %d", iteration);
+        mvprintw(0, 100, "Conway's Game of Life");
+        mvprintw(GAME_HEIGHT + 1, 200, "Cell density: %'g", random_count);
+
+        refresh();
+        handleInput(world);
+        
+        if (!paused) {
+            advanceWorld(world);
+            iteration++;
         }
-        else if (m == 1){
-            state->mousey += 1;
-        }
-        else if (m == 2){
-            state->mousex -= 1;
-        }
-        else if (m == 3){
-            state->mousex += 1;
-        }
-        // Je myska mimo plochy
+        
+        usleep(100000); // Задержка в 100 миллисекунд (0.1 секунды) (Oneskorenie 100 milisekúnd (0,1 sekundy))
     }
-    else if (event->type == EVENT_KEY){
-        // Move cat according to keyboard
-        if ( event->key == KEY_UP){
-            state->catx = 0;
-            state->caty = -1;
-        }
-        else if ( event->key == KEY_DOWN){
-            state->catx = 0;
-            state->caty = 1;
-        }
-        else if ( event->key == KEY_LEFT){
-            state->catx = -1;
-            state->caty = 0;
-        }
-        else if ( event->key == KEY_RIGHT){
-            state->catx = +1;
-            state->caty = 0;
-        }
-    }
-	// Draw world state 
-    //
-    // Draw cat
-    clear_screen();
-    set_color_cell('c',state->catx_position,state->caty_position,COLOR_YELLOW,COLOR_RED);
-    set_color_cell('-',state->catx_position-1,state->caty_position,COLOR_YELLOW,COLOR_GREEN);
-    //set_cell('c',state->catx_position,state->caty_position);
-    // Draw mouse
-    set_cell('m',state->mousex,state->mousey);
-    set_message( state->message,1,0);
-    return 0;
+
+    endwin(); // Завершение работы с curses (Dokončenie kliatby)
+
+    freeWorld(world);
 }
 
