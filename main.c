@@ -1,9 +1,15 @@
-#include "game.h"
-#include "world.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <curses.h>
 
+#include "world.h"
 
-int main(int argc, char** argv){
-    start_world(init_game,game_event,free);
+void playGame();
+
+int main() {
+    playGame();
+
     return 0;
 }
