@@ -1,78 +1,25 @@
-# World Game Library
+**Conway's Game of Life**
 
-Learn asycnronous C programming by a game.
+1. Hra "Conway's Game of Life", bunkový automat, ktorý v roku 1970 vynašiel anglický matematik John Conway. Je to hra bez hráčov, v ktorej človek vytvorí počiatočný stav a potom len pozoruje jeho vývoj.
 
-The library implements a game loop for a character-based ncurses game;
+2. Musíte skompilovať hru (gcc -o game game.c world.c main.c -lncurses), Potom spustite hru príkazom ./game, po ktorom sa hra okamžite spustí a bude fungovať.
 
-The library finds out the event types:
+3. Ovládanie hry je veľmi jednoduché Stlačením klávesu "Enter" sa svet znovu vygeneruje, klávesy "-" a "=" sa používajú na zmenu hustoty vygenerovaných buniek na mape, pričom samotnú hustotu je možné meniť vpravo dole od 0,04 do 0,35. Kláves "SPACE" je zodpovedný za zastavenie času, napr. ak chcete zobraziť konkrétny tvar. Opätovným stlačením tlačidla "SPACE" sa spustí beh času. Vľavo dole sa zobrazuje počet iterácií, aby ste pochopili, koľko času uplynulo od začiatku tejto hry Život.
 
-- start and end
-- mouse events
-- keyboard events
-- screen resize events
+4. Jednou z najdôležitejších zmien v hre je súbor World.c. Bol drasticky zmenený, aby hra fungovala správne, ale tieto zmeny budú zahrnuté v bode 7. Z dôležitých funkcií v kóde môžem vyzdvihnúť "setCell(World* world, size_t x, size_t y, bool value)" Táto funkcia nastavuje stav bunky na hracej ploche. Preberá ukazovateľ na štruktúru World, súradnice bunky (x, y) a logickú hodnotu, ktorá určuje, či je bunka živá (true) alebo mŕtva (false). 
+"(World)" Hracie pole reprezentované dvojrozmerným poľom buniek. Každá bunka môže byť živá (true) alebo mŕtva (false).
+"Клетка" Základná stavebná jednotka hry. Bunka môže byť v dvoch stavoch: živá alebo mŕtva. Stav každej bunky sa aktualizuje v každom kroku hry v závislosti od počtu živých susedov v jej okolí.
+"getCell(const World* world, size_t x, size_t y)" Táto funkcia vracia stav bunky na hracej ploche. Preberá ukazovateľ na štruktúru World a súradnice bunky (x, y). Vracia logickú hodnotu, kde true označuje živú bunku a false mŕtvu bunku.
 
-It can print colors and arbitrary characters on the screen. 
-Running is interrupted when character is drawn out of the screen.
+5. https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life https://rustwasm.github.io/docs/book/game-of-life/rules.html https://conwaylife.com/wiki/Conway%27s_Game_of_Life
 
-## Installation and Running
+6. Jediná vec, ktorá bola použitá zo ZAP, boli zručnosti na písanie takýchto funkcií, samotnú hru zo ZAP som nijako nepoužil.
 
-Make sure, that `ncurses` is installed.
-
-Clone this repository.
-
-Compile:
-
-```c
-make
-```
-	
-Run:
-
-```c
-./game
-```
-
-## Make your own game
-
-The game happens in a rectangular world of colorful characters. 
-Your goal as a programmer is to modify the world according to the pressed keys and the internal game state.
-The library implements the game loop and draws the world to screen.
-
-Your game in file `game.c` consists of two functions:
-
-- `void* init_game()` is called in the beginning. Here you can initialize the internal state of the game.
-The function should return  a pointer to an instance of the initial game state `game`.
-- `int game_event(struct event* event,void* game)`
-is called by the game loop in periodic interval or when a key was pressed. Non-zero return value or `Ctrl+C` key interrupts the game loop.
-
-The world variable represents state of two-dimensional grid of characters on the screen. The screen matrix looks like this:
-
-```
-   origin
-   [0,0]     width
-  +--------------------+
-h |                    |
-e |                    |
-i |                    |
-g |                    |
-h |                    |
-t |                    |
-  +--------------------+
-```
-
-The world  has the following parameters:
-
-- `int height`: y-dimension of the grid.
-- `int width`: x-dimension of the grid.
-- `int interval`: maximum time between steps in milliseconds.
-
-### The Event Function
-
-The `int game_event(struct event* event,void* game)`
- function should:
-
-1. Read the game state (from the `void* game`) pointer.
-1. Examine the pressed key from event pointer. If the `key` variable is non-zero, a key was pressed. According to the pressed key, modify the game state `game`.
-1. Draw the game state. In the beginning of the step function the screen is empty.
-1. Returning non-zero value ends the game loop. 
-
+7. Súbor world.c bol zásadne zmenený a tu sú hlavné zmeny:
+"newWorld(size_t width, size_t height)" Vytvorí nový svet danej veľkosti. Pridelí pamäť pre polia buniek na čítanie a zápis a vráti ukazovateľ na štruktúru World.
+"randomizeCells(World* world, float aliveChance)" Náhodne inicializuje stav buniek na hracej ploche s danou pravdepodobnosťou života.
+"setCell(World* world, size_t x, size_t y, bool isAlive)" Nastaví stav konkrétneho políčka na hracej ploche podľa zadaných súradníc.
+"getCell(const World* world, size_t x, size_t y)" Získa stav konkrétnej bunky na hracej ploche na zadaných súradniciach.
+"advanceWorld(World* world)" Posúva svet o krok vpred. Pre každú bunku sa volá funkcia advanceCellAt, ktorá určuje, či má bunka zostať živá, alebo sa má stať živou v nasledujúcej generácii.
+"printWorld(World* world, WINDOW* win)" Vypíše stav sveta do okna curses.
+"simpleConsoleRoutine()" Jednoduchá implementácia hernej slučky pre výstup na konzolu. Používa sa na demonštráciu hry v textovej podobe.
